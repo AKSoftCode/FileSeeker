@@ -1,0 +1,82 @@
+﻿@using MudBlazor;
+@using System.Diagnostics;
+@using System.ComponentModel;
+@using Services.Shared;
+
+<div class="w-100 h-100 pa-2">
+    <MudText Color="Color.Primary" Typo="Typo.h4">My Computer : Drives</MudText>
+
+    <MudStack Row="true">
+        @foreach (var drive in drives)
+        {
+            <MudContainer Class="pa-3">
+                <MudStack>
+                    @{
+                        var freespace = ((drive.AvailableFreeSpace / 1024.0) / 1024.0) / 1024.0;
+                    }
+                    <MudCard Style="width:200px;height:170px">
+                        <MudCardContent>
+                            <MudText Align="Align.Center" Color="Color.Success" Typo="Typo.h6"><b>@drive.ToString()</b></MudText>
+                            <MudText Align="Align.Center" Typo="Typo.body2"><b>Name</b>: @drive.VolumeLabel</MudText>
+                            <MudText Align="Align.Center" Typo="Typo.body2"><b>Free space</b>: @freespace.ToString("#.##") GB</MudText>
+                        </MudCardContent>
+                        <MudCardActions>
+                            <MudIconButton Icon="@Icons.Material.Filled.Folder" OnClick="async(x) => await OpenDrive(drive.ToString())" Color="Color.Primary" />
+                        </MudCardActions>
+                    </MudCard>
+
+                </MudStack>
+
+            </MudContainer>
+        }
+    </MudStack>
+
+    <MudPaper Class="pa-3" Style="background-color:transparent" Elevation="3" Outlined="true" Square="true" Height="210px" Width="100%">
+        <MudText Class="mt-2" Color="Color.Primary" Typo="Typo.h6">Search Filters</MudText>
+        
+        <MudStack Justify="Justify.SpaceBetween" Row="true">
+            <MudSelect Disabled="@(SearchActivated)" Class="pa-3" @bind-Value="SelectedDrive" T="string" Label="Select Drive" AnchorOrigin="Origin.BottomCenter">
+                @foreach (var drive in drives)
+                {
+                    <MudSelectItem Value="@drive.ToString()" />
+                }
+
+            </MudSelect>
+
+            <MudTextField Disabled="@(SearchActivated)" Class="pa-3" @bind-Value="NamePattern" Label="Name Search Pattern" Variant="Variant.Text" HelperText="* : search anything"></MudTextField>
+
+            <MudTextField Disabled="@(SearchActivated)" Class="pa-3" @bind-Value="SizePattern" T="long" Label="File Size" Adornment="Adornment.End" AdornmentText="MB" Variant="Variant.Text" HelperText="-1 : search any size"></MudTextField>
+        </MudStack>
+
+        <MudStack Row="true">
+            @if (!SearchActivated)
+            {
+                <MudFab Size="Size.Small" Color="Color.Success" OnClick="@(async () => await OnStartStopToggle(true) )" StartIcon="@Icons.Material.Filled.PlayCircle" />
+            }
+            else
+            {
+                <MudFab Size="Size.Small" Color="Color.Error" OnClick="@(async () => await OnStartStopToggle(false) )" StartIcon="@Icons.Material.Filled.PauseCircle" />
+  
+            }
+            <MudFab Size="Size.Small" OnClick="@(async ()=> await StopSearch())" Color="Color.Error" Disabled="@(!SearchStarted)" StartIcon="@Icons.Material.Filled.StopCircle" />
+        </MudStack>
+        
+    </MudPaper>
+
+    <MudDivider />
+
+    <MudPaper Style="background-color:transparent" Outlined="true" Square="true" Elevation="3" Class=" d-flex flex-column overflow-x-auto pa-3 mt-5" Height="250px" Width="100%">
+        <MudList Style="width:100%;height:100%" Items="FilesFound" Clickable="true">
+            <MudListSubheader>
+                <MudText Color="Color.Primary" Typo="Typo.body2">Files Found:</MudText>
+            </MudListSubheader>
+            
+            @foreach (FileSearchResult result in FilesFound)
+            {
+                <MudListItem Text="@result.FilePath" Icon="@Icons.Material.Filled.Bookmark" />
+            }
+        </MudList>
+    </MudPaper>
+
+</div>
+

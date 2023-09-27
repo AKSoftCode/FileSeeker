@@ -1,0 +1,20 @@
+﻿@using MudBlazor
+@inherits LayoutComponentBase
+
+<MudThemeProvider @ref="@_mudThemeProvider" @bind-IsDarkMode="@_isDarkMode" />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Color="Color.Primary" Dense="true">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
+        File Seeker
+    </MudAppBar>
+   @*  <MudDrawer @bind-Open="@_drawerOpen">
+       
+    </MudDrawer> *@
+    <MudMainContent>
+        @Body
+    </MudMainContent>
+</MudLayout>
+
