@@ -138,6 +138,7 @@ namespace Components
                 {
                     FilesFound.Clear();
                 }
+                fileSearchService!.Stop();
             }
 
             if(SearchActivated)
