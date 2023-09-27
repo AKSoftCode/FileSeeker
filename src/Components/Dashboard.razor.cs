@@ -129,6 +129,9 @@ namespace Components
 
         Task StopSearch(bool clearResult = false)
         {
+            if (SearchActivated)
+                fileSearchService!.Stop();
+
             SearchStarted = false;
             SearchActivated = false;
 
@@ -140,9 +143,6 @@ namespace Components
                 }
                 fileSearchService!.Stop();
             }
-
-            if(SearchActivated)
-                fileSearchService!.Stop();
 
             StateHasChanged();
 

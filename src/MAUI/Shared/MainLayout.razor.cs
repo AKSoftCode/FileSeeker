@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Components.Web;
 using MudBlazor;
 
 namespace FileSeeker.Shared
@@ -8,6 +9,12 @@ namespace FileSeeker.Shared
         private bool _isDarkMode;
         private MudThemeProvider? _mudThemeProvider;
 
+        private ErrorBoundary? errorBoundary;
+
+        protected override void OnParametersSet()
+        {
+            errorBoundary?.Recover();
+        }
         protected override async Task OnAfterRenderAsync(bool firstRender)
         {
             if (firstRender)

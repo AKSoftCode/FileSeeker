@@ -14,7 +14,14 @@
        
     </MudDrawer> *@
     <MudMainContent>
-        @Body
+        <ErrorBoundary @ref="errorBoundary">
+            <ChildContent>
+                @Body
+            </ChildContent>
+            <ErrorContent>
+                <p class="errorUI">Sorry! Please report the error on Github.</p>
+            </ErrorContent>
+        </ErrorBoundary>
     </MudMainContent>
 </MudLayout>
 

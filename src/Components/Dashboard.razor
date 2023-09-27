@@ -2,6 +2,7 @@
 @using System.Diagnostics;
 @using System.ComponentModel;
 @using Services.Shared;
+@using System.Collections.Concurrent;
 
 <div class="w-100 h-100 pa-2">
     <MudText Color="Color.Primary" Typo="Typo.h4">My Computer : Drives</MudText>
@@ -70,8 +71,14 @@
             <MudListSubheader>
                 <MudText Color="Color.Primary" Typo="Typo.body2">Files Found:</MudText>
             </MudListSubheader>
-            
-            @foreach (FileSearchResult result in FilesFound)
+            @{
+                ConcurrentBag<FileSearchResult> Temp;
+                lock (filesAddition)
+                {
+                    Temp = new ConcurrentBag<FileSearchResult>(FilesFound);
+                }
+            }
+            @foreach (FileSearchResult result in Temp)
             {
                 <MudListItem Text="@result.FilePath" Icon="@Icons.Material.Filled.Bookmark" />
             }

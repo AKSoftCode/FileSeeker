@@ -57,10 +57,13 @@ namespace Services
                                 OnFileFoundAsync(result).Wait(); // Ensure async processing completes before adding to the list
                             }
                         }
+                        catch (UnauthorizedAccessException ex)
+                        {
+                            Console.WriteLine($"Access to directory '{filePath}' was denied: {ex.Message}");
+                        }
                         catch (Exception ex)
                         {
-                            // Log the exception and continue with the next file
-                            Console.WriteLine($"An error occurred while processing file '{filePath}': {ex.Message}");
+                            Console.WriteLine($"An error occurred while processing directory '{filePath}': {ex.Message}");
                         }
                     }
 
