@@ -1,4 +1,5 @@
-﻿@using MudBlazor;
+﻿@using Microsoft.AspNetCore.Components.Web.Virtualization
+@using MudBlazor;
 @using System.Diagnostics;
 @using System.ComponentModel;
 @using Services.Shared;
@@ -67,22 +68,10 @@
     <MudDivider />
 
     <MudPaper Style="background-color:transparent" Outlined="true" Square="true" Elevation="3" Class=" d-flex flex-column overflow-x-auto pa-3 mt-5" Height="250px" Width="100%">
-        <MudList Style="width:100%;height:100%" Items="FilesFound" Clickable="true">
-            <MudListSubheader>
-                <MudText Color="Color.Primary" Typo="Typo.body2">Files Found:</MudText>
-            </MudListSubheader>
-            @{
-                ConcurrentBag<FileSearchResult> Temp;
-                lock (filesAddition)
-                {
-                    Temp = new ConcurrentBag<FileSearchResult>(FilesFound);
-                }
-            }
-            @foreach (FileSearchResult result in Temp)
-            {
-                <MudListItem Text="@result.FilePath" Icon="@Icons.Material.Filled.Bookmark" />
-            }
-        </MudList>
+        <MudText Color="Color.Primary" Typo="Typo.body2">Files Found:</MudText>
+        <Virtualize Items="FilesFound">
+            <div>@context.FilePath</div>
+        </Virtualize>
     </MudPaper>
 
 </div>
