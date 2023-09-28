@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 using Services;
 using Services.Shared;
 using System.Diagnostics;
+using System.IO;
 
 namespace Components
 {
@@ -74,11 +75,19 @@ namespace Components
 
         private List<FileSearchResult> FilesFound = new();
 
+        private List<DirectoryInfo> directories = new List<DirectoryInfo>();
+
         private readonly object filesAddition = new object();
 
         private bool SearchStarted = false;
 
         private bool SearchActivated = false;
+
+        string GetSizeOfFolder(DirectoryInfo folder)
+        {
+            var size = (folder.GetFiles().Sum(file => file.Length) / 1024.0) / 1024.0;
+            return size.ToString("#.##") + " MB";
+        }
         protected override Task OnInitializedAsync()
         {
             fileSearchService!.FileFoundAsync += OnFilesFoundAsync;
@@ -105,10 +114,21 @@ namespace Components
 
         async Task OnFilesFoundAsync(FileSearchResult result)
         {
+            string? path = "";
             lock(filesAddition)
             {
                 FilesFound.Add(result);
+                path = result?.fileInfo?.FullName ?? "";
             }
+
+            await Task.Run(() =>
+            {
+                string rootDirectory = Directory.GetParent(path ?? "")!.FullName;
+
+                var rootDirInfo = new DirectoryInfo(rootDirectory!);
+
+                directories.Add(rootDirInfo!);
+            });
 
             await refreshService!.CallRequestRefreshAsync();
         }
@@ -118,13 +138,14 @@ namespace Components
             lock (filesAddition)
             {
                 FilesFound.Clear();
+                directories.Clear();
             }
 
             await refreshService!.CallRequestRefreshAsync();
 
             if (String.IsNullOrEmpty(SelectedDrive)) return;
 
-            await fileSearchService!.SearchAsync(SelectedDrive, new FileSearchCriteria(NamePattern!, SizePattern! * 1024 * 1024));
+            await Task.Run(() => fileSearchService!.SearchAsync(SelectedDrive, new FileSearchCriteria(NamePattern!, SizePattern! * 1024 * 1024)));
         }
 
         Task StopSearch(bool clearResult = false)
@@ -140,8 +161,8 @@ namespace Components
                 lock (filesAddition)
                 {
                     FilesFound.Clear();
+                    directories.Clear();
                 }
-                fileSearchService!.Stop();
             }
 
             StateHasChanged();
@@ -156,7 +177,7 @@ namespace Components
 
             if (!SearchActivated)
             {
-                fileSearchService!.Pause();
+                await Task.Run(async () => await fileSearchService!.Pause());
             }
             else
             {
@@ -167,7 +188,7 @@ namespace Components
                 }
                 else
                 {
-                    fileSearchService!.Resume();
+                    await Task.Run(async () => await fileSearchService!.Resume());
                 }
             }
 

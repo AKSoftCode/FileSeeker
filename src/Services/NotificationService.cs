@@ -12,7 +12,7 @@ public class NotificationService
     public async Task HandleFileFound(FileSearchResult result)
     {
         await Task.Delay(0);
-        Console.WriteLine($"File Found: {result.FileName}, Path: {result.FilePath}, Size: {result.FileSizeBytes} bytes");
+        //Console.WriteLine($"File Found: {result.FileName}, Path: {result.FilePath}, Size: {result.FileSizeBytes} bytes");
         // You can implement your UI notification logic here.
     }
 }

@@ -69,8 +69,15 @@
 
     <MudPaper Style="background-color:transparent" Outlined="true" Square="true" Elevation="3" Class=" d-flex flex-column overflow-x-auto pa-3 mt-5" Height="250px" Width="100%">
         <MudText Color="Color.Primary" Typo="Typo.body2">Files Found:</MudText>
-        <Virtualize Items="FilesFound">
-            <div>@context.FilePath</div>
+        <Virtualize Items="directories">
+            <MudStack Row="true">
+                <MudText Style="width:800px">@context.FullName</MudText>
+                @{
+                    var size = ((@context.GetFiles().Sum(file => file.Length) / 1024.0) / 1024.0);
+                 }
+                <MudText Style="width:200px">Files: @context.GetFiles().Length</MudText>
+                <MudText Style="width:200px">Size: @size.ToString("#.##") MB</MudText>
+            </MudStack>    
         </Virtualize>
     </MudPaper>
 

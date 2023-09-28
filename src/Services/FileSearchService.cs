@@ -11,8 +11,7 @@ namespace Services
     public class FileSearchService
     {
         private CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
-        private readonly object pauseLock = new object();
-        private bool isPaused = false;
+        private SemaphoreSlim pauseSemaphore = new SemaphoreSlim(1, 1); // Initialize with count 1 to start as not paused
 
         public async Task SearchAsync(string? rootDirectory, FileSearchCriteria? criteria)
         {
@@ -24,37 +23,21 @@ namespace Services
 
                 await Task.Run(async () =>
                 {
-                    var options = new ParallelOptions
+                    async Task ProcessFileAsync(string filePath)
                     {
-                        CancellationToken = cancellationToken,
-                        MaxDegreeOfParallelism = Environment.ProcessorCount // Adjust this as needed
-                    };
+                        await pauseSemaphore.WaitAsync(); // Wait if paused
 
-                    void ProcessFile(string filePath)
-                    {
                         if (cancellationToken.IsCancellationRequested)
                             return;
 
-                        lock (pauseLock)
-                        {
-                            while (isPaused)
-                            {
-                                Monitor.Wait(pauseLock);
-                                if (cancellationToken.IsCancellationRequested)
-                                    return; // Check for cancellation after resuming
-                            }
-                        }
-
-                        var fileInfo = new FileInfo(filePath);
-
                         try
                         {
-                            if ((criteria!.FileNamePattern == "*" && (criteria.MinFileSizeBytes != -1 && fileInfo.Length > criteria.MinFileSizeBytes)) ||
-                                (criteria.MinFileSizeBytes == -1 && (criteria.FileNamePattern != "*" && fileInfo.Name.Contains(criteria.FileNamePattern))) ||
-                                (criteria.MinFileSizeBytes != -1 && criteria.FileNamePattern != "*" && fileInfo.Name.Contains(criteria.FileNamePattern) && fileInfo.Length > criteria.MinFileSizeBytes))
+                            var fileInfo = new FileInfo(filePath);
+
+                            if (MeetsCriteria(criteria, fileInfo))
                             {
-                                var result = new FileSearchResult(filePath, fileInfo.FullName, fileInfo.Length);
-                                OnFileFoundAsync(result).Wait(); // Ensure async processing completes before adding to the list
+                                var result = new FileSearchResult(fileInfo);
+                                await OnFileFoundAsync(result); // Ensure async processing completes before adding to the list
                             }
                         }
                         catch (UnauthorizedAccessException ex)
@@ -65,22 +48,27 @@ namespace Services
                         {
                             Console.WriteLine($"An error occurred while processing directory '{filePath}': {ex.Message}");
                         }
+                        finally
+                        {
+                            pauseSemaphore.Release(); // Release the semaphore after processing the file
+                        }
                     }
 
-                    void ProcessDirectory(string directory)
+                    async Task ProcessDirectoryAsync(string directory)
                     {
-                        if (cancellationToken.IsCancellationRequested)
-                            return;
-
                         try
                         {
                             var directoryFiles = Directory.GetFiles(directory);
-                            Parallel.ForEach(directoryFiles, options, ProcessFile);
-
-                            Parallel.ForEach(Directory.GetDirectories(directory), options, subdirectory =>
+                            foreach (var file in directoryFiles)
                             {
-                                ProcessDirectory(subdirectory);
-                            });
+                                await ProcessFileAsync(file);
+                            }
+
+                            var subdirectories = Directory.GetDirectories(directory);
+                            foreach (var subdirectory in subdirectories)
+                            {
+                                await ProcessDirectoryAsync(subdirectory);
+                            }
                         }
                         catch (UnauthorizedAccessException ex)
                         {
@@ -92,42 +80,44 @@ namespace Services
                         }
                     }
 
-                    ProcessDirectory(rootDirectory);
+                    await ProcessDirectoryAsync(rootDirectory);
 
-                    await OnFileSearchEnd();
-
-                    Stop();
                 }, cancellationToken);
             }
-            catch
+            catch (Exception ex)
             {
-                // Handle the exception, e.g., log it or skip the directory.
+                Console.WriteLine($"An error occurred: {ex.Message}");
+            }
+            finally
+            {
+                await OnFileSearchEnd();
             }
         }
 
-        public void Pause()
+        private bool MeetsCriteria(FileSearchCriteria criteria, FileInfo fileInfo)
         {
-            lock (pauseLock)
-            {
-                isPaused = true;
-            }
+            return (criteria.FileNamePattern == "*" || fileInfo.Name.Contains(criteria.FileNamePattern))
+                && (criteria.MinFileSizeBytes == -1 || fileInfo.Length > criteria.MinFileSizeBytes);
         }
 
-        public void Resume()
+        public async Task Pause()
         {
-            lock (pauseLock)
-            {
-                isPaused = false;
-                Monitor.PulseAll(pauseLock); // Signal all waiting threads to resume
-            }
+            await pauseSemaphore.WaitAsync(); // Wait for the semaphore to be released (pause)
+        }
+
+        public Task Resume()
+        {
+            pauseSemaphore.Release(); // Release the semaphore to resume
+            return Task.CompletedTask;
         }
 
         public void Stop()
         {
             cancellationTokenSource.Cancel();
-            cancellationTokenSource.Dispose(); // Dispose the old token source
-            cancellationTokenSource = new CancellationTokenSource(); // Create a new token source for restarts
+            cancellationTokenSource.Dispose();
+            cancellationTokenSource = new CancellationTokenSource();
         }
+
 
         private readonly ConcurrentBag<Func<FileSearchResult, Task>> fileFoundHandlers = new ConcurrentBag<Func<FileSearchResult, Task>>();
         private readonly ConcurrentBag<Func<Task>> fileSearchEndHandlers = new ConcurrentBag<Func<Task>>();
