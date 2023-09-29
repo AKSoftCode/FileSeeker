@@ -75,19 +75,12 @@ namespace Components
 
         private List<FileSearchResult> FilesFound = new();
 
-        private List<DirectoryInfo> directories = new List<DirectoryInfo>();
-
         private readonly object filesAddition = new object();
 
         private bool SearchStarted = false;
 
         private bool SearchActivated = false;
 
-        string GetSizeOfFolder(DirectoryInfo folder)
-        {
-            var size = (folder.GetFiles().Sum(file => file.Length) / 1024.0) / 1024.0;
-            return size.ToString("#.##") + " MB";
-        }
         protected override Task OnInitializedAsync()
         {
             fileSearchService!.FileFoundAsync += OnFilesFoundAsync;
@@ -126,8 +119,6 @@ namespace Components
                 string rootDirectory = Directory.GetParent(path ?? "")!.FullName;
 
                 var rootDirInfo = new DirectoryInfo(rootDirectory!);
-
-                directories.Add(rootDirInfo!);
             });
 
             await refreshService!.CallRequestRefreshAsync();
@@ -138,7 +129,6 @@ namespace Components
             lock (filesAddition)
             {
                 FilesFound.Clear();
-                directories.Clear();
             }
 
             await refreshService!.CallRequestRefreshAsync();
@@ -161,7 +151,6 @@ namespace Components
                 lock (filesAddition)
                 {
                     FilesFound.Clear();
-                    directories.Clear();
                 }
             }
 
